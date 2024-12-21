@@ -1,6 +1,5 @@
-﻿var sourcePath = @"D:\\BACKUP\\";
-var destinationPath = @"D:\\PhoneBackup\\";
-
+﻿var sourcePath = @"{{SOURCE_PATH}}";
+var destinationPath = @"{{DESTINATION_PATH}}";
 
 if (!Directory.Exists(sourcePath))
     return;
