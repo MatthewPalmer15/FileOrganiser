@@ -33,7 +33,7 @@ foreach (var filePath in filePaths)
     {
         var fileAttributes = File.GetAttributes(filePath);
 
-        if ((fileAttributes & FileAttributes.System) != FileAttributes.System)
+        if (((fileAttributes & FileAttributes.System) != FileAttributes.System) || ((fileAttributes & FileAttributes.Hidden) != FileAttributes.Hidden))
         {
             File.Move(filePath, fileDestinationPath);
             Console.WriteLine($"File moved: {filePath} => {fileDestinationPath}");
