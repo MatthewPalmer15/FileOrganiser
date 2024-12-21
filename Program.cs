@@ -1,5 +1,9 @@
-﻿var sourcePath = @"{{SOURCE_PATH}}";
-var destinationPath = @"{{DESTINATION_PATH}}";
+﻿var sourcePath = @"D:\\BACKUP\\";
+var destinationPath = @"D:\\PhoneBackup\\";
+
+
+if (!Directory.Exists(sourcePath))
+    return;
 
 var filePaths = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories);
 foreach (var filePath in filePaths)
@@ -19,6 +23,14 @@ foreach (var filePath in filePaths)
     else if (file.Extension.ToLower() is ".mp4" or ".avi" or ".mkv" or ".mov" or ".flv" or ".webm")
     {
         fileDestinationPath += "Videos/";
+    }
+    else if (file.Extension.ToLower() is ".mp3" or ".wav" or ".flac" or ".aac" or ".ogg" or ".wma" or ".m4a")
+    {
+        fileDestinationPath += "Audio/";
+    }
+    else if (file.Extension.ToLower() is ".exe" or ".bat" or ".cmd" or ".sh" or ".bash" or ".app" or ".msi" or ".apk")
+    {
+        fileDestinationPath += "Installers/";
     }
     else if (file.Extension.ToLower() is ".txt" or ".pdf" or ".docx" or ".xlsx" or ".pptx")
     {
