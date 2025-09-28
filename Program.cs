@@ -1,8 +1,46 @@
-﻿var sourcePath = @"{{SOURCE_PATH}}";
-var destinationPath = @"{{DESTINATION_PATH}}";
+﻿using FileOrganiser.Enums;
+using FileOrganiser.Extensions;
+using System.IO.Compression;
+
+var sourcePath = @"D:\Files\Pending";
+var destinationPath = @"D:\Files\Completed";
 
 if (!Directory.Exists(sourcePath))
     return;
+
+// EXTRACT ZIP FILES FIRST.
+foreach (var zipPath in Directory.EnumerateFiles(sourcePath, "*.zip", SearchOption.AllDirectories))
+{
+    try
+    {
+        var attrs = File.GetAttributes(zipPath);
+        if ((attrs & FileAttributes.System) == FileAttributes.System || (attrs & FileAttributes.Hidden) == FileAttributes.Hidden)
+        {
+            Console.WriteLine($"Skipping system/hidden zip: {zipPath}");
+            continue;
+        }
+
+        var parentDir = Path.GetDirectoryName(zipPath)!;
+        var extractDirName = Path.GetFileNameWithoutExtension(zipPath);
+        var extractDir = Path.Combine(parentDir, extractDirName);
+
+        // If it's already extracted (folder exists and not empty), skip.
+        if (Directory.Exists(extractDir) && Directory.EnumerateFileSystemEntries(extractDir).Any())
+        {
+            Console.WriteLine($"Already extracted: {zipPath}");
+            continue;
+        }
+
+        Directory.CreateDirectory(extractDir);
+        ZipFile.ExtractToDirectory(zipPath, extractDir, overwriteFiles: true);
+        Console.WriteLine($"Extracted: {zipPath} => {extractDir}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error extracting {zipPath}: {ex.Message}");
+    }
+}
+
 
 var filePaths = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories);
 foreach (var filePath in filePaths)
@@ -13,29 +51,21 @@ foreach (var filePath in filePaths)
     if (string.IsNullOrWhiteSpace(file.Extension))
         continue;
 
-    var fileDestinationPath = $"{destinationPath}/{file.LastWriteTime.Year}/{file.LastWriteTime:MMMM}/";
+    var fileType = file.GetFileType();
 
-    if (file.Extension.ToLower() is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".tiff")
+    var destinationSubFolder = fileType switch
     {
-        fileDestinationPath += "Images/";
-    }
-    else if (file.Extension.ToLower() is ".mp4" or ".avi" or ".mkv" or ".mov" or ".flv" or ".webm")
-    {
-        fileDestinationPath += "Videos/";
-    }
-    else if (file.Extension.ToLower() is ".mp3" or ".wav" or ".flac" or ".aac" or ".ogg" or ".wma" or ".m4a")
-    {
-        fileDestinationPath += "Audio/";
-    }
-    else if (file.Extension.ToLower() is ".exe" or ".bat" or ".cmd" or ".sh" or ".bash" or ".app" or ".msi" or ".apk")
-    {
-        fileDestinationPath += "Installers/";
-    }
-    else if (file.Extension.ToLower() is ".txt" or ".pdf" or ".docx" or ".xlsx" or ".pptx")
-    {
-        fileDestinationPath += "Documents/";
-    }
+        FileTypeEnum.Image => "Images/",
+        FileTypeEnum.Video => "Videos/",
+        FileTypeEnum.Audio => "Audios/",
+        FileTypeEnum.Executables => "Executables",
+        FileTypeEnum.Document => "Documents/",
+        FileTypeEnum.Zip => "Zip/",
+        FileTypeEnum.Unknown => "Other/",
+        _ => throw new InvalidOperationException("File type is not supported.")
+    };
 
+    var fileDestinationPath = $"{destinationPath}/{destinationSubFolder}/{file.CreationTimeUtc.Year}/{file.CreationTimeUtc:MMMM}/";
     if (!Directory.Exists(fileDestinationPath))
         Directory.CreateDirectory(fileDestinationPath);
 
@@ -44,15 +74,16 @@ foreach (var filePath in filePaths)
     {
         var fileAttributes = File.GetAttributes(filePath);
 
-        if (((fileAttributes & FileAttributes.System) != FileAttributes.System) && ((fileAttributes & FileAttributes.Hidden) != FileAttributes.Hidden))
-        {
-            File.Move(filePath, fileDestinationPath);
-            Console.WriteLine($"File moved: {filePath} => {fileDestinationPath}");
-        }
-        else
+        var isSystemFile = (fileAttributes & FileAttributes.System) == FileAttributes.System;
+        var isHiddenFile = (fileAttributes & FileAttributes.Hidden) == FileAttributes.Hidden;
+
+        if (isHiddenFile || isSystemFile)
         {
             Console.WriteLine($"Cannot move system file: {filePath}");
+            continue;
         }
+
+        File.Move(filePath, fileDestinationPath);
     }
     catch (IOException ex)
     {
