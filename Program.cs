@@ -76,11 +76,29 @@ foreach (var filePath in filePaths)
 
         var isSystemFile = (fileAttributes & FileAttributes.System) == FileAttributes.System;
         var isHiddenFile = (fileAttributes & FileAttributes.Hidden) == FileAttributes.Hidden;
+        var isDirectory = (fileAttributes & FileAttributes.Directory) == FileAttributes.Directory;
+        var isReparsePoint = (fileAttributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint;
+
+        if (isDirectory || isReparsePoint)
+        {
+            Console.WriteLine($"Cannot move directory: {filePath}");
+            continue;
+        }
 
         if (isHiddenFile || isSystemFile)
         {
             Console.WriteLine($"Cannot move system file: {filePath}");
             continue;
+        }
+
+        if (File.Exists(fileDestinationPath))
+        {
+            var existingFile = new FileInfo(fileDestinationPath);
+            if (file.LastWriteTimeUtc <= existingFile.LastWriteTimeUtc)
+            {
+                Console.WriteLine($"File exists and is out of date: {filePath}");
+                continue;
+            }
         }
 
         File.Move(filePath, fileDestinationPath);
